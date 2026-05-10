@@ -1,0 +1,20 @@
+.DS_Store
+*.user*
+
+# Shared Rust build output
+/core/target
+
+# macOS SwiftUI build output
+/platforms/macos/.build
+/platforms/macos/.swiftpm
+/platforms/macos/rust-core/target
+
+# Windows/Linux desktop build output
+/platforms/desktop/node_modules
+/platforms/desktop/dist
+/platforms/desktop/src-tauri/target
+/platforms/desktop/src-tauri/gen
+
+# Final packages are generated locally or by CI.
+/artifacts/releases/*
+!/artifacts/releases/.gitkeep

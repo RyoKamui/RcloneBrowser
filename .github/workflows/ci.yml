@@ -1,0 +1,98 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  shared-core:
+    name: Shared Rust core
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - name: Check formatting
+        run: cargo fmt --manifest-path core/Cargo.toml --check
+      - name: Test shared behavior
+        run: cargo test --locked --manifest-path core/Cargo.toml
+      - name: Lint shared behavior
+        run: cargo clippy --locked --manifest-path core/Cargo.toml --all-targets -- -D warnings
+
+  macos:
+    name: macOS SwiftUI
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v7
+      - name: Check Rust formatting
+        run: cargo fmt --manifest-path platforms/macos/rust-core/Cargo.toml --check
+      - name: Test Rust core
+        run: cargo test --locked --manifest-path platforms/macos/rust-core/Cargo.toml
+      - name: Lint Rust core
+        run: cargo clippy --locked --manifest-path platforms/macos/rust-core/Cargo.toml --all-targets -- -D warnings
+      - name: Build Rust release library
+        run: cargo build --release --locked --manifest-path platforms/macos/rust-core/Cargo.toml
+      - name: Test Swift application
+        env:
+          CLANG_MODULE_CACHE_PATH: ${{ runner.temp }}/rclone-browser-clang-cache
+          XDG_CACHE_HOME: ${{ runner.temp }}/rclone-browser-swift-cache
+        run: swift test --disable-sandbox --package-path platforms/macos
+      - name: Package macOS application
+        run: platforms/macos/scripts/package-macos.sh
+      - name: Verify bundle signature
+        run: codesign --verify --deep --strict --verbose=2 'artifacts/releases/macos/Rclone Browser.app'
+      - name: Upload macOS package
+        uses: actions/upload-artifact@v6
+        with:
+          name: rclone-browser-macos
+          path: artifacts/releases/macos
+          if-no-files-found: error
+
+  tauri-foundation:
+    name: Tauri foundation (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            release_directory: linux
+          - os: windows-2025
+            release_directory: windows
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: platforms/desktop/package-lock.json
+      - name: Install Linux dependencies
+        if: runner.os == 'Linux'
+        run: >-
+          sudo apt-get update && sudo apt-get install -y
+          libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev
+          libxdo-dev
+      - name: Install frontend dependencies
+        working-directory: platforms/desktop
+        run: npm ci
+      - name: Build frontend
+        working-directory: platforms/desktop
+        run: npm run build
+      - name: Check Rust formatting
+        run: cargo fmt --manifest-path platforms/desktop/src-tauri/Cargo.toml --check
+      - name: Test Tauri backend
+        run: cargo test --locked --manifest-path platforms/desktop/src-tauri/Cargo.toml
+      - name: Lint Tauri backend
+        run: cargo clippy --locked --manifest-path platforms/desktop/src-tauri/Cargo.toml --all-targets -- -D warnings
+      - name: Build desktop package
+        run: platforms/desktop/scripts/package-release.sh
+      - name: Upload desktop packages
+        uses: actions/upload-artifact@v6
+        with:
+          name: rclone-browser-${{ matrix.release_directory }}
+          path: artifacts/releases/${{ matrix.release_directory }}
+          if-no-files-found: error

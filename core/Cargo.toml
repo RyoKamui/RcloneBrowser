@@ -1,0 +1,9 @@
+[package]
+name = "rclone-browser-shared"
+version = "3.0.0"
+edition = "2024"
+license = "MIT"
+description = "Cross-platform domain logic shared by Rclone Browser frontends"
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }

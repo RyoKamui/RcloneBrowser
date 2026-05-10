@@ -1,0 +1,4 @@
+module CRcloneCore {
+    header "include/rclone_core.h"
+    export *
+}

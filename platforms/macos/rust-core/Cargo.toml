@@ -1,0 +1,20 @@
+[package]
+name = "rclone-browser-core"
+version = "3.0.0"
+edition = "2024"
+license = "MIT"
+description = "Native Rust backend for Rclone Browser"
+
+[lib]
+name = "rclone_browser_core"
+crate-type = ["staticlib", "rlib"]
+
+[dependencies]
+rclone-browser-shared = { path = "../../../core" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+plist = "1"
+uuid = { version = "1", features = ["v4", "serde"] }
+
+[dev-dependencies]
+tempfile = "3"
